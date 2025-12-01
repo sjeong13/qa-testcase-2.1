@@ -1,17 +1,10 @@
 # =====================================================================================
-
-#2025-11-10 : 비밀번호 인증 기능 추가
-#2025-11-11 : JSON 다운로드, [수정] 버튼 추가, 테스트 케이스 - 줄글 형식 저장 기능 추가
-#2025-11-12 : JSON 파싱 오류 개선 (간헐적), 속도 향상 개선 함수 추가
-#2025-11-13 : 속도 향상 개선 함수 제거, 줄글 형식/기획 문서에 링크 url 항목 추가, [샘플 테스트 케이스 로드] 버튼 제거, AI 테스트 케이스 저장 기능 추가
-#2025-11-14 : 브라우저 새 탭 전체보기 기능 추가, 기존 테스트 케이스 활용 접힘 상태, 테스트 케이스 표 하나의 케이스로 묶기
-#2025-11-17 : Google Sheets 연동 추가 - 데이터 영구 저장, 연관성 기반 필터링 함수 추가(결국 학습 데이터가 많아서 타임아웃 걸림...)
-#2025-11-19 : Supabase + 벡터 검색 전환
-#2025-11-26 : ver.1 완성 *표 그룹 쪼개서 생성 및 저장되는 버전
-#2025-11-27 : 버그/개선 수정
-# ㄴ 비밀번호 입력 후 Enter 키 동작 오류, 기획 문서 삭제 버튼 오류, 줄글 형식/파일 업로드 저장 후 데이터 초기화 개선, [수정] 버튼 추가
-#2025-12-01 : ver.2 완성 *페이지에서는 표 그룹으로 조회 가능하도록 개선
-
+"""
+2025-12-01
+QA 테스트 케이스 자동 생성 봇 v2.1
+- 하이브리드 검색: 벡터 검색 + LLM 재랭킹
+- Supabase 테이블: test_cases_v21, spec_docs_v21
+"""
 # =====================================================================================
 
 import streamlit as st
@@ -24,12 +17,15 @@ from io import BytesIO, StringIO
 from supabase_helpers import (
     get_supabase_client,
     save_test_case_to_supabase,
-    load_test_cases_from_supabase,
-    delete_test_case_from_supabase,
     save_spec_doc_to_supabase,
-    load_spec_docs_from_supabase,
-    search_similar_test_cases,
-    search_similar_spec_docs
+    hybrid_search_test_cases,      # ⭐ 하이브리드 검색
+    hybrid_search_spec_docs,       # ⭐ 하이브리드 검색
+    TABLE_NAME,                     # test_cases_v21
+    SPEC_TABLE_NAME,                # spec_docs_v21
+    GOOGLE_API_KEY,
+    INITIAL_SEARCH_COUNT,
+    FINAL_SEARCH_COUNT,
+    RERANK_METHOD
 )
 
 # Excel 지원 확인
@@ -39,56 +35,6 @@ try:
     EXCEL_AVAILABLE = True
 except ImportError:
     EXCEL_AVAILABLE = False
-    st.warning("⚠️ Excel 다운로드 기능을 사용하려면 터미널에서 다음 명령을 실행하세요: pip install openpyxl")
-
-# Google Gemini API 클라이언트 초기화
-@st.cache_resource
-def get_gemini_client():
-    api_key = os.environ.get("GOOGLE_API_KEY")
-    if not api_key:
-        st.error("GOOGLE_API_KEY 환경 변수가 설정되지 않았습니다.")
-        return None
-    genai.configure(api_key=api_key)
-    return genai.GenerativeModel('models/gemini-2.5-flash')
-    # return genai.GenerativeModel('models/gemini-2.5-pro') # 품질 중요시
-    # return genai.GenerativeModel('gemini-2.0-flash-exp') # 베타 버전
-
-# ✅ 연관성 기반 필터링 함수
-def get_relevant_test_cases(query, test_cases, max_cases=50):
-    """검색어와 연관성 높은 테스트 케이스 추출"""
-    # 1. 검색어에서 주요 키워드 추출 (소문자 변환)
-    query_keywords = set(query.lower().split())
-    scored_cases = []
-
-    # 2. 각 테스트 케이스의 연관성 점수 계산
-    for tc in test_cases:
-        score = 0
-                
-        # 카테고리 매칭 (가중치 3)
-        if tc.get('category') and any(k in tc['category'].lower() for k in query_keywords):
-            score += 1
-
-        # 이름/제목 매칭 (가중치 2)
-        if tc.get('name') and any(k in tc['name'].lower() for k in query_keywords):
-            score += 2
-
-        # 설명/내용 매칭 (가중치 1)
-        if tc.get('description') and any(k in tc['description'].lower() for k in query_keywords):
-            score += 5
-
-        # 표 데이터 매칭 (가중치 1)
-        if tc.get('table_data'):
-            for row in tc['table_data']:
-                if any(k in str(row).lower() for k in query_keywords):
-                    score += 3
-                    break
-        scored_cases.append((score, tc))
-
-    # 3. 점수 높은 순으로 정렬 후 상위 N개 선택
-    scored_cases.sort(reverse=True, key=lambda x: x[0])
-    relevant = [tc for score, tc in scored_cases if score > 0][:max_cases]
-    # 4. 연관성 없으면 최근 케이스 반환
-    return relevant if relevant else test_cases[-max_cases:]
 
 # 세션 스테이트 초기화
 if 'test_cases' not in st.session_state:
@@ -116,8 +62,11 @@ st.set_page_config(
 
 # URL 파라미터 확인
 query_params = st.query_params
-page = query_params.get("page", ["main"])[0] if isinstance(query_params.get("page"), list) else query_params.get("page", "main")
 
+# Streamlit 1.30+ 버전 호환
+page = query_params.get("page", "main")
+if isinstance(page, list):
+    page = page[0]
 
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
@@ -1033,15 +982,20 @@ else:
         if st.button("AI 추천 받기", type="primary"):
             if search_query:
                 with st.spinner("AI가 유사한 케이스를 검색중이에요. 1분 ~ 최대 5분 소요될 수 있어요🥹"):
-                    client = get_gemini_client()
+                        # Gemini 클라이언트 직접 생성
+                        api_key = os.environ.get("GOOGLE_API_KEY")
+                        if not api_key:
+                            st.error("❌ GOOGLE_API_KEY 환경 변수가 설정되지 않았습니다.")
+                            st.stop()
+
+                        genai.configure(api_key=api_key)
                     
-                    if client:
                         # 벡터 유사도 검색
                         try:
                             # 1. Supabase에서 유사한 테스트 케이스 검색
                             with st.spinner("벡터 유사도 계산 중..."):
-                                relevant_cases = search_similar_test_cases(
-                                    query=search_query,
+                                relevant_cases = hybrid_search_test_cases(
+                                    query_text=search_query,
                                     limit=50,
                                     similarity_threshold=0.3  # 30% 이상 유사도
                                 )
@@ -1060,16 +1014,18 @@ else:
 
                             else:
                                 st.warning("⚠️ 유사한 테스트 케이스를 찾지 못했습니다. 일반 케이스로 진행합니다.")
-                                # 벡터 검색 실패 시 최신 50개
-                                all_cases = load_test_cases_from_supabase(limit=50)
-                                relevant_cases = all_cases
+                                # 벡터 검색 실패 시에도 하이브리드 검색 사용 (임계값 낮춤)
+                                all_cases = hybrid_search_test_cases(
+                                    query_text=search_query,
+                                    category_filter=None
+                                )
                                 
                                 # 세션 스테이트에 저장
                                 st.session_state.relevant_cases = all_cases
 
                             # 2. 기획 문서도 벡터 검색
                             spec_docs_str = ""
-                            spec_docs = search_similar_spec_docs(query=search_query, limit=10)
+                            spec_docs = hybrid_search_spec_docs(query_text=search_query)
 
                             if spec_docs:
                                 st.info(f"📚 {len(spec_docs)}개의 관련 기획 문서를 발견했습니다!")
@@ -1095,12 +1051,46 @@ else:
                             )
                             
                         except Exception as e:
-                            st.error(f"❌ 벡터 검색 실패: {str(e)}")
-                            st.warning("키워드 검색으로 전환합니다...")
+                            st.error(f"❌ 하이브리드 검색 실패: {str(e)}")
+                            st.warning("최소 임계값으로 재시도합니다...")
 
-                            # Fallback: 최신 50개
-                            relevant_cases = load_test_cases_from_supabase(limit=50)
-                            test_cases_str = json.dumps(relevant_cases, ensure_ascii=False, indent=2)
+                            try:
+                                # 임계값 0으로 하이브리드 검색 재시도
+                                relevant_cases = hybrid_search_test_cases(
+                                    query_text=search_query,
+                                    category_filter=None
+                                )
+
+                                if relevant_cases:
+                                    test_cases_str = json.dumps(
+                                        [
+                                            {
+                                                "id": tc.get("id"),
+                                                "category": tc.get("category"),
+                                                "name": tc.get("name"),
+                                                "description": tc.get("description"),
+                                                "data": tc.get("data"),
+                                                "similarity": tc.get("similarity")
+                                            }
+                                            for tc in relevant_cases
+                                        ],
+                                        ensure_ascii=False,
+                                        indent=2
+                                    )
+                                    st.session_state.relevant_cases = relevant_cases
+                                    st.info(f"✅ {len(relevant_cases)}개의 테스트 케이스를 찾았습니다 (재시도 성공)")
+                                else:
+                                    st.warning("재시도에도 결과를 찾지 못했습니다. 일반 케이스로 진행합니다.")
+                                    relevant_cases = []
+                                    test_cases_str = "[]"
+                                    st.session_state.relevant_cases = []
+            
+                            except Exception as e2:
+                                st.error(f"❌ 재시도 실패: {str(e2)}")
+                                relevant_cases = []
+                                test_cases_str = "[]"
+                                st.session_state.relevant_cases = []
+    
                             spec_docs_str = ""
 
                             # 세션 스테이트에 저장
@@ -1178,7 +1168,11 @@ else:
 
                         # 5. AI 응답 처리
                         try:
-                            response = client.generate_content(prompt)
+                            # Gemini 직접 호출
+                            api_key = os.environ.get("GOOGLE_API_KEY")
+                            genai.configure(api_key=api_key)
+                            model = genai.GenerativeModel('gemini-2.5-flash')
+                            response = model.generate_content(prompt)
                             response_text = response.text
                                         
                             # JSON 파싱
