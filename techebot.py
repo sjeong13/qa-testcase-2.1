@@ -104,6 +104,7 @@ if not st.session_state.authenticated:
     st.stop()
 
 st.title("👾 테케봇 (QA Test Case Bot)")
+st.caption("v2.1 - 하이브리드 검색 버전 🚀")
 st.markdown("---")
 
 # ============================================
@@ -527,6 +528,14 @@ else:
             st.success("☁️ Supabase 연결됨")
         else:
             st.error("❌ Supabase 연결 실패")
+
+        # 추가: 하이브리드 검색 설정 표시
+        with st.expander("⚙️ 검색 설정", expanded=False):
+            st.info(f"""
+            **검색 방식**: {RERANK_METHOD.upper()}  
+            **1차 검색**: {INITIAL_SEARCH_COUNT}개
+            **최종 선택**: {FINAL_SEARCH_COUNT}개
+            """)
 
         st.markdown("---")
         
@@ -993,7 +1002,7 @@ else:
                         # 벡터 유사도 검색
                         try:
                             # 1. Supabase에서 유사한 테스트 케이스 검색
-                            with st.spinner("벡터 유사도 계산 중..."):
+                            with st.spinner("🔍 1단계: 벡터 검색 중..."):
                                 relevant_cases = hybrid_search_test_cases(
                                     query_text=search_query,
                                     limit=50,
@@ -1004,7 +1013,7 @@ else:
                                 st.session_state.relevant_cases = relevant_cases
                                 
                             if relevant_cases:
-                                st.info(f"📊 {len(relevant_cases)}개의 유사한 테스트 케이스를 발견했습니다!")
+                                st.success(f"✅ 1단계 완료: {len(relevant_cases)}개 발견")
 
                                 # 유사도 정보 표시
                                 with st.expander("🔍 검색된 케이스 미리보기", expanded=False):
