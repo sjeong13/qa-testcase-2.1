@@ -251,7 +251,7 @@ if page == "test_cases":
                                     try:
                                         # 기존 그룹 전체 삭제
                                         for row in rows:
-                                            supabase.table('test_cases').delete().eq('id', row['id']).execute()
+                                            supabase.table(TABLE_NAME).delete().eq('id', row['id']).execute()
 
                                         # 새로운 데이터로 다시 저장
                                         new_table_data = []
@@ -345,7 +345,7 @@ if page == "test_cases":
                                 if st.button("🗑️ 삭제", key=f"delete_{unique_key}", use_container_width=True):
                                     try:
                                         for row in rows:
-                                            supabase.table('test_cases').delete().eq('id', row['id']).execute()
+                                            supabase.table(TABLE_NAME).delete().eq('id', row['id']).execute()
                                         st.success("✅ 삭제되었습니다!")
                                         st.rerun()
                                     except Exception as e:
@@ -373,7 +373,7 @@ if page == "test_cases":
                                 with col1:
                                     if st.button("💾 저장", key=f"save_tc_{row['id']}", use_container_width=True):
                                         try:
-                                            supabase.table('test_cases').update({
+                                            supabase.table(TABLE_NAME).update({
                                                 'category': edited_category,
                                                 'name': edited_name,
                                                 'description': edited_desc,
@@ -441,7 +441,7 @@ elif page == "spec_docs":
     supabase = get_supabase_client()
     if supabase:
         try:
-            result = supabase.table('spec_docs').select('*').order('id', desc=True).execute()
+            result = supabase.table(SPEC_TABLE_NAME).select('*').order('id', desc=True).execute()
 
             if result.data:
                 st.metric("전체 문서 수", f"{len(result.data)}개")
@@ -465,7 +465,7 @@ elif page == "spec_docs":
                             with col1:
                                 if st.button("💾 저장", key=f"save_spec_{row['id']}", use_container_width=True):
                                     try:
-                                        supabase.table('spec_docs').update({
+                                        supabase.table(SPEC_TABLE_NAME).update({
                                             'title': edited_title,
                                             'doc_type': edited_type,
                                             'link': edited_link,
@@ -501,7 +501,7 @@ elif page == "spec_docs":
                                 # 삭제 버튼
                                 if st.button("🗑️ 삭제", key=f"delete_spec_{row['id']}", use_container_width=True):
                                     try:
-                                        supabase.table('spec_docs').delete().eq('id', row['id']).execute()
+                                        supabase.table(SPEC_TABLE_NAME).delete().eq('id', row['id']).execute()
                                         st.success("✅ 삭제되었습니다!")
                                         st.rerun()
                                     except Exception as e:
@@ -939,7 +939,7 @@ else:
             supabase = get_supabase_client()
             if supabase:
                 try:
-                    result = supabase.table('spec_docs').select('id, title, doc_type').execute()
+                    result = supabase.table(SPEC_TABLE_NAME).select('id, title, doc_type').execute()
                     total_count = len(result.data)
                     st.metric("전체 문서 수", f"{total_count}개")
 
