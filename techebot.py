@@ -124,7 +124,7 @@ if page == "test_cases":
     if supabase:
         try:
             # 전체 데이터 조회
-            result = supabase.table('test_cases').select('*').order('id', desc=True).execute()
+            result = supabase.table(TABLE_NAME).select('*').order('id', desc=True).execute()
 
             if result.data:
                 # 카테고리별 통계
@@ -800,7 +800,7 @@ else:
             if supabase:
                 try:
                     # 전체 개수
-                    result = supabase.table('test_cases').select('id, category, data').execute()
+                    result = supabase.table(TABLE_NAME).select('id, category, data').execute()
                     total_count = len(result.data)
                     st.metric("Supabase 전체 케이스 수", f"{total_count}개")
 
@@ -970,8 +970,8 @@ else:
         supabase = get_supabase_client()
         if supabase:
             try:
-                tc_count = len(supabase.table('test_cases').select('id').execute().data)
-                doc_count = len(supabase.table('spec_docs').select('id').execute().data)
+                tc_count = len(supabase.table(TABLE_NAME).select('id').execute().data)
+                doc_count = len(supabase.table(SPEC_TABLE_NAME).select('id').execute().data)
 
                 if tc_count == 0 and doc_count == 0:
                     st.warning("⚠️ 먼저 테스트 케이스나 기획 문서를 추가해주세요!")
