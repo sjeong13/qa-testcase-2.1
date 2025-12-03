@@ -830,31 +830,31 @@ else:
 
             st.metric("Supabase 전체 케이스 수", f"{total_count}개")
 
-                    # 카테고리별 통계
-                    if total_count > 0:
-                        # 추가: 카테고리 통계 위해 필요시 다시 조회
-                        if 'tc_count' in st.session_state:
-                            supabase = get_supabase_client()
-                            if supabase:
-                                result = supabase.table(TABLE_NAME).select('id, category, data').execute()
-                                categories = {}
-                                for row in result.data:
-                                    cat = row.get('category', '미분류')
-                                    categories[cat] = categories.get(cat, 0) + 1
+            # 카테고리별 통계
+            if total_count > 0:
+                # 추가: 카테고리 통계 위해 필요시 다시 조회
+                if 'tc_count' in st.session_state:
+                    supabase = get_supabase_client()
+                    if supabase:
+                        result = supabase.table(TABLE_NAME).select('id, category, data').execute()
+                        categories = {}
+                        for row in result.data:
+                            cat = row.get('category', '미분류')
+                            categories[cat] = categories.get(cat, 0) + 1
 
-                                with st.expander("📊 카테고리별 통계", expanded=False):
-                                    for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
-                                        st.write(f"**{cat}**: {count}개")
+                        with st.expander("📊 카테고리별 통계", expanded=False):
+                            for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
+                                st.write(f"**{cat}**: {count}개")
 
-                    # 새 탭으로 열기 링크
-                    if total_count > 0:
-                        st.markdown(
-                            '<a href="?page=test_cases" target="_blank" style="text-decoration: none;">'
-                            '<button style="width: 100%; padding: 10px; background-color: #f0f2f6; border: 1px solid #d0d0d0; border-radius: 5px; cursor: pointer;">'
-                            '📝 전체 테스트 케이스 보기 (새 탭) →'
-                            '</button></a>',
-                            unsafe_allow_html=True
-                        )
+            # 새 탭으로 열기 링크
+            if total_count > 0:
+                st.markdown(
+                    '<a href="?page=test_cases" target="_blank" style="text-decoration: none;">'
+                    '<button style="width: 100%; padding: 10px; background-color: #f0f2f6; border: 1px solid #d0d0d0; border-radius: 5px; cursor: pointer;">'
+                    '📝 전체 테스트 케이스 보기 (새 탭) →'
+                    '</button></a>',
+                    unsafe_allow_html=True
+                )
                 except Exception as e:
                     st.error(f"통계 조회 실패: {str(e)}")
                     st.metric("전체 케이스 수", "조회 실패")
@@ -993,15 +993,15 @@ else:
 
             st.metric("전체 문서 수", f"{total_count}개")
 
-                    # 새 탭으로 열기 링크
-                    if total_count > 0:
-                        st.markdown(
-                            '<a href="?page=spec_docs" target="_blank" style="text-decoration: none;">'
-                            '<button style="width: 100%; padding: 10px; background-color: #f0f2f6; border: 1px solid #d0d0d0; border-radius: 5px; cursor: pointer;">'
-                            '📚 전체 기획 문서 보기 (새 탭) →'
-                            '</button></a>',
-                            unsafe_allow_html=True
-                        )
+            # 새 탭으로 열기 링크
+            if total_count > 0:
+                st.markdown(
+                    '<a href="?page=spec_docs" target="_blank" style="text-decoration: none;">'
+                    '<button style="width: 100%; padding: 10px; background-color: #f0f2f6; border: 1px solid #d0d0d0; border-radius: 5px; cursor: pointer;">'
+                    '📚 전체 기획 문서 보기 (새 탭) →'
+                    '</button></a>',
+                    unsafe_allow_html=True
+                )
                 except Exception as e:
                     st.error(f"문서 통계 조회 실패: {str(e)}")
             else:
