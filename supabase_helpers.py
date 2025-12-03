@@ -62,13 +62,15 @@ def generate_embedding(text: str):
 # ========================================
 # ⭐ 하이브리드 검색 (핵심 기능)
 # ========================================
-def hybrid_search_test_cases(query_text: str, category_filter=None):
+def hybrid_search_test_cases(query_text: str, category_filter=None, limit=None, similarity_threshold=0.3):
     """
     하이브리드 검색: 벡터 검색 → LLM 재랭킹
     
     Args:
         query_text: 사용자 질문
         category_filter: 카테고리 필터 (옵션)
+        limit: 검색 개수 제한 (옵션)
+        similarity_threshold: 유사도 임계값 (기본: 0.3)
     
     Returns:
         재랭킹된 테스트 케이스 리스트
@@ -78,6 +80,14 @@ def hybrid_search_test_cases(query_text: str, category_filter=None):
         return []
     
     try:
+        # limit 파라미터 처리
+        if limit:
+            initial_count = limit
+            final_count = min(limit, FINAL_SEARCH_COUNT)
+        else:
+            initial_count = INITIAL_SEARCH_COUNT
+            final_count = FINAL_SEARCH_COUNT
+            
         # 1단계: 벡터 검색 (넓게 가져오기)
         st.info(f"🔍 1단계: 벡터 검색 중... (최대 {INITIAL_SEARCH_COUNT}개)")
         
@@ -89,8 +99,8 @@ def hybrid_search_test_cases(query_text: str, category_filter=None):
             'match_test_cases_v21',
             {
                 'query_embedding': query_embedding,
-                'match_count': INITIAL_SEARCH_COUNT,
-                'similarity_threshold': 0.3
+                'match_count': initial_count,  # limit 적용
+                'similarity_threshold': similarity_threshold  # 파라미터 적용
             }
         ).execute()
         
@@ -107,8 +117,10 @@ def hybrid_search_test_cases(query_text: str, category_filter=None):
             st.info(f"🔖 카테고리 필터 적용: {len(candidates)}개 남음")
         
         # 2단계: LLM 재랭킹
-        st.info(f"🤖 2단계: {RERANK_METHOD.upper()} 재랭킹 중... (상위 {FINAL_SEARCH_COUNT}개 선택)")
-        reranked = rerank_candidates(query_text, candidates, FINAL_SEARCH_COUNT)
+        # st.info(f"🤖 2단계: {RERANK_METHOD.upper()} 재랭킹 중... (상위 {FINAL_SEARCH_COUNT}개 선택)")
+        st.info(f"🤖 2단계: {RERANK_METHOD.upper()} 재랭킹 중... (상위 {final_count}개 선택)")
+        # reranked = rerank_candidates(query_text, candidates, FINAL_SEARCH_COUNT)
+        reranked = rerank_candidates(query_text, candidates, final_count)
         
         st.success(f"✅ 2단계 완료: 최종 {len(reranked)}개 반환")
         
@@ -122,12 +134,25 @@ def hybrid_search_test_cases(query_text: str, category_filter=None):
 def hybrid_search_spec_docs(query_text: str):
     """
     기획 문서 하이브리드 검색
+
+    Args:
+        query_text: 사용자 질문
+        limit: 검색 개수 제한 (옵션)
+        similarity_threshold: 유사도 임계값 (기본: 0.3)
     """
     supabase = get_supabase_client()
     if not supabase:
         return []
     
     try:
+        # limit 처리
+        if limit:
+            initial_count = limit
+            final_count = min(limit // 2, 5)
+        else:
+            initial_count = 20
+            final_count = 5
+            
         # 1단계: 벡터 검색
         query_embedding = generate_embedding(query_text)
         if not query_embedding:
@@ -137,8 +162,8 @@ def hybrid_search_spec_docs(query_text: str):
             'match_spec_docs_v21',
             {
                 'query_embedding': query_embedding,
-                'match_count': 20,  # 기획 문서는 적게
-                'similarity_threshold': 0.3
+                'match_count': initial_count,  # limit 적용
+                'similarity_threshold': similarity_threshold  # 파라미터 적용
             }
         ).execute()
         
@@ -146,7 +171,8 @@ def hybrid_search_spec_docs(query_text: str):
             return []
         
         # 2단계: 재랭킹
-        reranked = rerank_candidates(query_text, result.data, 5)  # 상위 5개
+        # reranked = rerank_candidates(query_text, result.data, 5)  # 상위 5개
+        reranked = rerank_candidates(query_text, result.data, final_count)
         
         return reranked
         
