@@ -521,7 +521,7 @@ elif page == "spec_docs":
             result = supabase.table(SPEC_TABLE_NAME)\
                 .select('*')\
                 .order('id', desc=True)\
-                .limit(5)\
+                .limit(2)\
                 .execute()
 
             if result.data:
