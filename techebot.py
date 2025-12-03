@@ -441,7 +441,7 @@ if page == "test_cases":
                                 # 삭제 버튼
                                 with col2:
                                     if st.button("🗑️ 삭제", key=f"delete_tc_{row['id']}", use_container_width=True):
-                                        success = delete_test_case_from_supabase(row['id'])
+                                        supabase.table(TABLE_NAME).delete().eq('id', row['id']).execute()
                                         if success:
                                             st.success("✅ 삭제되었습니다!")
                                             st.rerun()
