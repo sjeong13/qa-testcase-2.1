@@ -157,36 +157,32 @@ if page == "test_cases":
     supabase = get_supabase_client()
     if supabase:
         try:
-            # 전체 데이터 조회
-            result = supabase.table(TABLE_NAME).select('*').order('id', desc=True).execute()
+            # 1. 전체 개수 조회
+            count_result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
+            total_count = count_result.count
+
+            st.metric("전체 케이스 수", f"{total_count}개")
+
+            # 2. 최근 5개만 조회 (id 내림차순)
+            result = supabase.table(TABLE_NAME)\
+                .select('*')\
+                .order('id', desc=True)\
+                .limit(5)\
+                .execute()
 
             if result.data:
-                count_result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
-                total_count = count_result.count  # 정확한 전체 개수
-                
-                # 카테고리별 통계
-                categories = {}
-                for row in result.data:
-                    cat = row.get('category', '미분류')
-                    categories[cat] = categories.get(cat, 0) + 1
-        
-                st.metric("전체 케이스 수", f"{total_count}개")
-        
-                with st.expander("📊 카테고리별 통계", expanded=False):
-                    for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
-                        st.write(f"**{cat}**: {count}개")
-
+                st.markdown("### 📌 최근 등록한 테스트 케이스 (5개)")
                 st.markdown("---")
 
                 # group_id로 재조립
                 grouped_cases = {}
                 ungrouped_cases = []
         
-                # 전체 테스트 케이스 표시
+                # 최근 5개 테스트 케이스 처리
                 for row in result.data:
-                    tc_data = row.get('data', {})  # JSONB에서 원본 데이터
+                    tc_data = row.get('data', {})
                     group_id = tc_data.get('group_id')
-
+                    
                     if group_id:
                         # 그룹이 있는 케이스
                         if group_id not in grouped_cases:
@@ -502,14 +498,21 @@ elif page == "spec_docs":
     supabase = get_supabase_client()
     if supabase:
         try:
-            result = supabase.table(SPEC_TABLE_NAME).select('*').order('id', desc=True).execute()
+            # 1. 전체 개수 조회
+            count_result = supabase.table(SPEC_TABLE_NAME).select('id', count='exact').execute()
+            total_count = count_result.count
+
+            st.metric("전체 문서 수", f"{total_count}개")
+            
+            # 2. 최근 5개만 조회
+            result = supabase.table(SPEC_TABLE_NAME)\
+                .select('*')\
+                .order('id', desc=True)\
+                .limit(5)\
+                .execute()
 
             if result.data:
-                # 전체 개수 조회
-                count_result = supabase.table(SPEC_TABLE_NAME).select('id', count='exact').execute()
-                total_count = count_result.count
-                
-                st.metric("전체 문서 수", f"{total_count}개")
+                st.markdown("### 📌 최근 등록한 기획 문서 (5개)")
                 st.markdown("---")
 
                 # 전체 기획 문서 표시
