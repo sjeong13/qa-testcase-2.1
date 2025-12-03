@@ -46,6 +46,40 @@ if 'spec_docs' not in st.session_state:
 if 'search_history' not in st.session_state:
     st.session_state.search_history = []
 
+# 카운트 초기화 시 DB에서 실제 값 가져오기
+if 'tc_count' not in st.session_state or st.session_state.get('force_reload_tc_count', False):
+    supabase = get_supabase_client()
+    if supabase:
+        try:
+            # count() 사용 - 모든 레코드 수를 정확히 반환
+            result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
+            st.session_state.tc_count = result.count  # count 속성 사용
+
+            # 플래그 초기화
+            if 'force_reload_tc_count' in st.session_state:
+                del st.session_state.force_reload_tc_count
+        except:
+            st.session_state.tc_count = 0
+    else:
+        st.session_state.tc_count = 0
+
+if 'doc_count' not in st.session_state or st.session_state.get('force_reload_doc_count', False):
+    supabase = get_supabase_client()  # 다시 가져오기
+    if supabase:
+        try:
+            # count() 사용
+            result = supabase.table(SPEC_TABLE_NAME).select('id', count='exact').execute()
+            st.session_state.doc_count = result.count  # count 속성 사용
+
+            # 플래그 초기화
+            if 'force_reload_doc_count' in st.session_state:
+                del st.session_state.force_reload_doc_count
+                
+        except:
+            st.session_state.doc_count = 0
+    else:
+        st.session_state.doc_count = 0
+
 # 편집 모드 세션 스테이트
 if 'editing_test_case_id' not in st.session_state:
     st.session_state.editing_test_case_id = None
@@ -127,13 +161,16 @@ if page == "test_cases":
             result = supabase.table(TABLE_NAME).select('*').order('id', desc=True).execute()
 
             if result.data:
+                count_result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
+                total_count = count_result.count  # 정확한 전체 개수
+                
                 # 카테고리별 통계
                 categories = {}
                 for row in result.data:
                     cat = row.get('category', '미분류')
                     categories[cat] = categories.get(cat, 0) + 1
         
-                st.metric("전체 케이스 수", f"{len(result.data)}개")
+                st.metric("전체 케이스 수", f"{total_count}개")
         
                 with st.expander("📊 카테고리별 통계", expanded=False):
                     for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
@@ -345,8 +382,17 @@ if page == "test_cases":
                             with col2:
                                 if st.button("🗑️ 삭제", key=f"delete_{unique_key}", use_container_width=True):
                                     try:
+                                        # 1. 그룹 내 모든 케이스 삭제
                                         for row in rows:
                                             supabase.table(TABLE_NAME).delete().eq('id', row['id']).execute()
+
+                                        # 2. 캐시 클리어
+                                        st.cache_data.clear()
+
+                                        # 3. 카운트 업데이트
+                                        result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
+                                        st.session_state.tc_count = result.count  # count 사용
+                                        
                                         st.success("✅ 삭제되었습니다!")
                                         st.rerun()
                                     except Exception as e:
@@ -417,10 +463,24 @@ if page == "test_cases":
                                 # 삭제 버튼
                                 with col2:
                                     if st.button("🗑️ 삭제", key=f"delete_tc_{row['id']}", use_container_width=True):
-                                        success = delete_test_case_from_supabase(row['id'])
-                                        if success:
+                                        try:
+                                            # 1. DB에서 삭제
+                                            supabase.table(TABLE_NAME).delete().eq('id', row['id']).execute()
+
+                                            # 2. 캐시 클리어
+                                            st.cache_data.clear()
+                                            
+                                            # 3. 카운트 업데이트
+                                            supabase = get_supabase_client()
+                                            if supabase:
+                                                result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
+                                                st.session_state.tc_count = result.count  # count 사용
+                                            
                                             st.success("✅ 삭제되었습니다!")
                                             st.rerun()
+
+                                        except Exception as e:
+                                            st.error(f"❌ 삭제 실패: {str(e)}")
 
             else:
                 st.info("아직 저장된 테스트 케이스가 없습니다.")
@@ -445,7 +505,11 @@ elif page == "spec_docs":
             result = supabase.table(SPEC_TABLE_NAME).select('*').order('id', desc=True).execute()
 
             if result.data:
-                st.metric("전체 문서 수", f"{len(result.data)}개")
+                # 전체 개수 조회
+                count_result = supabase.table(SPEC_TABLE_NAME).select('id', count='exact').execute()
+                total_count = count_result.count
+                
+                st.metric("전체 문서 수", f"{total_count}개")
                 st.markdown("---")
 
                 # 전체 기획 문서 표시
@@ -502,7 +566,16 @@ elif page == "spec_docs":
                                 # 삭제 버튼
                                 if st.button("🗑️ 삭제", key=f"delete_spec_{row['id']}", use_container_width=True):
                                     try:
+                                        # 1. DB에서 삭제
                                         supabase.table(SPEC_TABLE_NAME).delete().eq('id', row['id']).execute()
+
+                                        # 2. 캐시 클리어
+                                        st.cache_data.clear()
+
+                                        # 3. 카운트 업데이트
+                                        result = supabase.table(SPEC_TABLE_NAME).select('id', count='exact').execute()
+                                        st.session_state.doc_count = result.count  # count 사용
+                                        
                                         st.success("✅ 삭제되었습니다!")
                                         st.rerun()
                                     except Exception as e:
@@ -665,6 +738,29 @@ else:
                                 saved_count = save_test_case_to_supabase(group_test)
             
                             if saved_count > 0:
+                                # 1. 캐시 클리어
+                                st.cache_data.clear()
+
+                                # 2. DB 반영 대기 (선택사항)
+                                import time
+                                time.sleep(0.5)
+                                
+                                # 3. 저장 직후 카운트 업데이트
+                                supabase = get_supabase_client()
+                                if supabase:
+                                    try:
+                                        result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
+                                        new_count = result.count  # count 사용
+
+                                        # 플래그 설정 (rerun 후 초기화 트리거)
+                                        st.session_state.force_reload_tc_count = True
+                                        st.session_state.tc_count = new_count
+                                        
+                                        # 디버깅 출력
+                                        st.info(f"🔍 Debug: 저장 후 DB 카운트 = {new_count}")
+                                    except Exception as e:
+                                        st.error(f"🔍 Debug: 카운트 업데이트 실패 - {str(e)}")
+
                                 # 세션 초기화 (데이터프레임 리셋)
                                 st.session_state.edit_df = pd.DataFrame({
                                     'NO': [''],
@@ -750,6 +846,29 @@ else:
                             saved_count = save_test_case_to_supabase(free_form_test)
 
                         if saved_count > 0:
+                            # 1. 캐시 클리어
+                            st.cache_data.clear()
+
+                            # 2. DB 반영 대기
+                            import time
+                            time.sleep(0.5)
+                            
+                            # 저장 직후 카운트 업데이트
+                            supabase = get_supabase_client()
+                            if supabase:
+                                try:
+                                    result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
+                                    new_count = result.count  # count 사용
+
+                                    # 플래그 설정
+                                    st.session_state.force_reload_tc_count = True
+                                    st.session_state.tc_count = new_count
+
+                                    # 디버깅 출력
+                                    st.info(f"🔍 Debug: 줄글 저장 후 DB 카운트 = {new_count}")
+                                except Exception as e:
+                                    st.error(f"🔍 Debug: 카운트 업데이트 실패 - {str(e)}")
+                            
                             # 초기화 플래그 설정 후 rerun
                             st.session_state.tab1_tc_reset_flag = True
                                     
@@ -796,17 +915,41 @@ else:
             # 테스트 케이스 요약
             st.subheader(f"📋 저장된 테스트 케이스")
 
-            # Supabase에서 실시간 조회
-            supabase = get_supabase_client()
-            if supabase:
-                try:
-                    # 전체 개수
-                    result = supabase.table(TABLE_NAME).select('id, category, data').execute()
-                    total_count = len(result.data)
-                    st.metric("Supabase 전체 케이스 수", f"{total_count}개")
+            # 🔍 디버깅: 세션 스테이트 확인
+            st.write(f"🔍 Debug: 세션 스테이트 tc_count = {st.session_state.get('tc_count', 'None')}")
 
-                    # 카테고리별 통계
-                    if total_count > 0:
+
+            # 세션 스테이트 우선 사용
+            if 'tc_count' in st.session_state:
+                total_count = st.session_state.tc_count
+                st.write(f"🔍 Debug: 세션 스테이트에서 가져옴 = {total_count}")
+            else:
+
+                # Supabase에서 실시간 조회
+                supabase = get_supabase_client()
+                if supabase:
+                    try:
+                        # 전체 개수
+                        result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
+                        total_count = result.count  # ✅ count 사용
+                        st.session_state.tc_count = total_count
+                        st.write(f"🔍 Debug: DB에서 조회 = {total_count}")
+                    except Exception as e:
+                        st.error(f"통계 조회 실패: {str(e)}")
+                        total_count = 0
+
+                else:
+                    total_count = 0
+
+            st.metric("Supabase 전체 케이스 수", f"{total_count}개")
+
+            # 카테고리별 통계
+            if total_count > 0:
+                # 추가: 카테고리 통계 위해 필요시 다시 조회
+                if 'tc_count' in st.session_state:
+                    supabase = get_supabase_client()
+                    if supabase:
+                        result = supabase.table(TABLE_NAME).select('id, category, data').execute()
                         categories = {}
                         for row in result.data:
                             cat = row.get('category', '미분류')
@@ -816,20 +959,16 @@ else:
                             for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
                                 st.write(f"**{cat}**: {count}개")
 
-                    # 새 탭으로 열기 링크
-                    if total_count > 0:
-                        st.markdown(
-                            '<a href="?page=test_cases" target="_blank" style="text-decoration: none;">'
-                            '<button style="width: 100%; padding: 10px; background-color: #f0f2f6; border: 1px solid #d0d0d0; border-radius: 5px; cursor: pointer;">'
-                            '📝 전체 테스트 케이스 보기 (새 탭) →'
-                            '</button></a>',
-                            unsafe_allow_html=True
-                        )
-                except Exception as e:
-                    st.error(f"통계 조회 실패: {str(e)}")
-                    st.metric("전체 케이스 수", "조회 실패")
-            else:
-                st.warning("Supabase 연결 필요")
+            # 새 탭으로 열기 링크
+            if total_count > 0:
+                st.markdown(
+                    '<a href="?page=test_cases" target="_blank" style="text-decoration: none;">'
+                    '<button style="width: 100%; padding: 10px; background-color: #f0f2f6; border: 1px solid #d0d0d0; border-radius: 5px; cursor: pointer;">'
+                    '📝 전체 테스트 케이스 보기 (새 탭) →'
+                    '</button></a>',
+                    unsafe_allow_html=True
+                )
+
        
         # 개발자 도구
         with tab1:
@@ -919,11 +1058,34 @@ else:
                             success = save_spec_doc_to_supabase(new_spec)
 
                         if success:
+                            # 1. 캐시 클리어
+                            st.cache_data.clear()
+
+                            # 2. DB 반영 대기
+                            import time
+                            time.sleep(0.5)
+                            
+                            # 3. 저장 직후 카운트 업데이트 (강제)
+                            supabase = get_supabase_client()
+                            if supabase:
+                                try:
+                                    result = supabase.table(SPEC_TABLE_NAME).select('id', count='exact').execute()
+                                    new_count = result.count  # count 사용
+
+                                    # 플래그 설정
+                                    st.session_state.force_reload_doc_count = True
+                                    st.session_state.doc_count = new_count
+
+                                    st.info(f"🔍 Debug: 기획 문서 저장 후 DB 카운트 = {new_count}")
+                                except Exception as e:
+                                    st.error(f"🔍 Debug: 카운트 업데이트 실패 - {str(e)}")
+                                    
                             # 초기화 플래그 설정 후 rerun
                             st.session_state.tab2_spec_reset_flag = True
-                            
+            
                             st.success(f"✅ 기획 문서가 Supabase에 저장되었습니다!")
                             st.rerun()
+
                         else:
                             st.error("❌ 저장 실패!")
 
@@ -936,27 +1098,36 @@ else:
             # 기획 문서 요약
             st.subheader(f"📄 저장된 기획 문서")
 
-            # Supabase에서 실시간 조회
-            supabase = get_supabase_client()
-            if supabase:
-                try:
-                    result = supabase.table(SPEC_TABLE_NAME).select('id, title, doc_type').execute()
-                    total_count = len(result.data)
-                    st.metric("전체 문서 수", f"{total_count}개")
+            # 세션 스테이트 우선 사용
+            if 'doc_count' in st.session_state:
+                total_count = st.session_state.doc_count
 
-                    # 새 탭으로 열기 링크
-                    if total_count > 0:
-                        st.markdown(
-                            '<a href="?page=spec_docs" target="_blank" style="text-decoration: none;">'
-                            '<button style="width: 100%; padding: 10px; background-color: #f0f2f6; border: 1px solid #d0d0d0; border-radius: 5px; cursor: pointer;">'
-                            '📚 전체 기획 문서 보기 (새 탭) →'
-                            '</button></a>',
-                            unsafe_allow_html=True
-                        )
-                except Exception as e:
-                    st.error(f"문서 통계 조회 실패: {str(e)}")
             else:
-                st.warning("Supabase 연결 필요")
+                # Supabase에서 조회
+                supabase = get_supabase_client()
+                if supabase:
+                    try:
+                        result = supabase.table(SPEC_TABLE_NAME).select('id, title, doc_type').execute()
+                        total_count = len(result.data)
+                        st.session_state.doc_count = total_count
+                    except Exception as e:
+                        st.error(f"문서 통계 조회 실패: {str(e)}")
+                        total_count = 0
+                else:
+                    total_count = 0
+
+            st.metric("전체 문서 수", f"{total_count}개")
+
+            # 새 탭으로 열기 링크
+            if total_count > 0:
+                st.markdown(
+                    '<a href="?page=spec_docs" target="_blank" style="text-decoration: none;">'
+                    '<button style="width: 100%; padding: 10px; background-color: #f0f2f6; border: 1px solid #d0d0d0; border-radius: 5px; cursor: pointer;">'
+                    '📚 전체 기획 문서 보기 (새 탭) →'
+                    '</button></a>',
+                    unsafe_allow_html=True
+                )
+
 
     # ============================================
     # 메인 영역 - AI 기반 테스트 케이스 추천
@@ -967,20 +1138,20 @@ else:
     with col1:
         st.header("🔍 AI 기반 테스트 케이스 추천")
 
-        # 데이터 개수 체크
-        supabase = get_supabase_client()
-        if supabase:
-            try:
-                tc_count = len(supabase.table(TABLE_NAME).select('id').execute().data)
-                doc_count = len(supabase.table(SPEC_TABLE_NAME).select('id').execute().data)
 
-                if tc_count == 0 and doc_count == 0:
-                    st.warning("⚠️ 먼저 테스트 케이스나 기획 문서를 추가해주세요!")
-                    st.info("💡 왼쪽 사이드바에서 데이터를 추가할 수 있습니다.")
-                else:
-                    st.info(f"📊 현재 **{tc_count}개**의 테스트 케이스와 **{doc_count}개**의 기획 문서를 학습할 수 있습니다.")
-            except:
-                pass
+        # 세션 스테이트에서 가져오기
+        tc_count = st.session_state.get('tc_count', 0)
+        doc_count = st.session_state.get('doc_count', 0)
+        
+        # 🔍 디버깅 출력
+        st.write(f"🔍 Debug: 메인 페이지 tc_count = {tc_count}")
+
+        if tc_count == 0 and doc_count == 0:
+            st.warning("⚠️ 먼저 테스트 케이스나 기획 문서를 추가해주세요!")
+            st.info("💡 왼쪽 사이드바에서 데이터를 추가할 수 있습니다.")
+        else:
+            st.info(f"📊 현재 **{tc_count}개**의 테스트 케이스와 **{doc_count}개**의 기획 문서를 학습할 수 있습니다.")
+
                 
         search_query = st.text_area(
             "테스트하고 싶은 기능을 입력하세요.\n설명을 상세하게 적을수록 AI는 더 정확한 케이스를 찾아서 추천해줍니다!",
@@ -1323,11 +1494,31 @@ else:
                                 saved_count = save_test_case_to_supabase(group_test)
 
                             if saved_count > 0:
+                                # 1. 캐시 클리어
+                                st.cache_data.clear()
+
+                                # 2. DB 반영 대기
+                                import time
+                                time.sleep(0.5)
+
+                                # 3. 저장 직후 카운트 업데이트
+                                supabase = get_supabase_client()
+                                if supabase:
+                                    try:
+                                        result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
+                                        new_count = result.count  # count 사용
+
+                                        # 플래그 설정
+                                        st.session_state.force_reload_tc_count = True
+                                        st.session_state.tc_count = new_count
+                                        
+                                        st.info(f"🔍 Debug: AI 저장 후 DB 카운트 = {new_count}")
+                                    except Exception as e:
+                                        st.error(f"🔍 Debug: 카운트 업데이트 실패 - {str(e)}")
+
                                 st.success(f"✅ {saved_count}개 저장 완료!")
                                 del st.session_state.last_ai_response
                                 st.rerun()
-                            else:
-                                st.error("❌ 저장 실패!")
 
             if ai_response.get("test_order"):
                 st.markdown("### 🔄 권장 테스트 순서")
