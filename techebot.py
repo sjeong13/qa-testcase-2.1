@@ -46,12 +46,29 @@ if 'spec_docs' not in st.session_state:
 if 'search_history' not in st.session_state:
     st.session_state.search_history = []
 
-# 추가: 카운트 세션 스테이트 초기화
+# 카운트 초기화 시 DB에서 실제 값 가져오기
 if 'tc_count' not in st.session_state:
-    st.session_state.tc_count = 0
+    supabase = get_supabase_client()
+    if supabase:
+        try:
+            result = supabase.table(TABLE_NAME).select('id').execute()
+            st.session_state.tc_count = len(result.data)
+        except:
+            st.session_state.tc_count = 0
+    else:
+        st.session_state.tc_count = 0
 
 if 'doc_count' not in st.session_state:
     st.session_state.doc_count = 0
+    if supabase:
+        try:
+            result = supabase.table(SPEC_TABLE_NAME).select('id').execute()
+            st.session_state.doc_count = len(result.data)
+        except:
+            st.session_state.doc_count = 0
+
+    else:
+        st.session_state.doc_count = 0
 
 # 편집 모드 세션 스테이트
 if 'editing_test_case_id' not in st.session_state:
@@ -1020,18 +1037,6 @@ else:
         # 세션 스테이트에서 가져오기
         tc_count = st.session_state.get('tc_count', 0)
         doc_count = st.session_state.get('doc_count', 0)
-
-        # 초기 로딩 시에만 Supabase 조회
-        if tc_count == 0 and doc_count == 0:
-            supabase = get_supabase_client()
-            if supabase:
-                try:
-                    tc_count = len(supabase.table(TABLE_NAME).select('id').execute().data)
-                    doc_count = len(supabase.table(SPEC_TABLE_NAME).select('id').execute().data)
-                    st.session_state.tc_count = tc_count
-                    st.session_state.doc_count = doc_count
-                except:
-                    pass
 
         if tc_count == 0 and doc_count == 0:
             st.warning("⚠️ 먼저 테스트 케이스나 기획 문서를 추가해주세요!")
