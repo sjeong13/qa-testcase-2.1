@@ -1418,7 +1418,18 @@ else:
         # ✅ 버튼 클릭 블록 밖에서 세션 체크
         if 'last_ai_response' in st.session_state:
             ai_response = st.session_state.last_ai_response
-            
+
+            # 타입 체크 추가
+            if not isinstance(ai_response, dict):
+                st.error("❌ AI 응답 형식이 올바르지 않습니다. 다시 시도해주세요.")
+                st.write(f"🔍 Debug: ai_response 타입 = {type(ai_response)}")
+                st.write(f"🔍 Debug: ai_response 내용 = {ai_response}")
+
+                # 세션 초기화
+                if 'last_ai_response' in st.session_state:
+                    del st.session_state.last_ai_response
+                st.stop()
+
             st.markdown("### 🧠 AI의 사고 과정")
             st.info(ai_response.get("reasoning", "추론 과정 없음"))
             
