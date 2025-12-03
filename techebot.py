@@ -408,10 +408,10 @@ if page == "test_cases":
                                         except Exception as e:
                                             st.error(f"❌ 삭제 실패: {str(e)}")
                 # 8. 개별 케이스. 그룹 없는 케이스 (줄글 형식 등) (최근 2개)
-                if recent_5_ungrouped:
+                if recent_2_ungrouped:
                     st.markdown("### 📝 최근 개별 케이스 (2개)")
                     
-                    for row in recent_5_ungrouped:
+                    for row in recent_2_ungrouped:
                         tc_data = row.get('data', {})
                         
                         with st.expander(f"[{row.get('category', '미분류')}] {row.get('name', '제목 없음')}", expanded=False):
