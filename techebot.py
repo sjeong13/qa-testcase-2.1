@@ -66,7 +66,6 @@ if 'doc_count' not in st.session_state:
             st.session_state.doc_count = len(result.data)
         except:
             st.session_state.doc_count = 0
-
     else:
         st.session_state.doc_count = 0
 
@@ -726,7 +725,7 @@ else:
 
                                 # 2. DB 반영 대기 (선택사항)
                                 import time
-                                time.sleep(0.3)
+                                time.sleep(0.5)
                                 
                                 # 3. 저장 직후 카운트 업데이트
                                 supabase = get_supabase_client()
@@ -734,10 +733,14 @@ else:
                                     try:
                                         result = supabase.table(TABLE_NAME).select('id').execute()
                                         new_count = len(result.data)  # 변수 정의
+                                        
+                                        # 강제로 세션 스테이트 삭제 후 재설정
+                                        if 'tc_count' in st.session_state:
+                                            del st.session_state.tc_count
                                         st.session_state.tc_count = new_count
 
                                         # 디버깅 출력
-                                        st.info(f"🔍 Debug: 저장 후 DB 카운트 = {new_count}")
+                                        st.info(f"🔍 Debug: 저장 후 DB 카운트 = {new_count} (강제 업데이트)")
                                     except Exception as e:
                                         st.error(f"🔍 Debug: 카운트 업데이트 실패 - {str(e)}")
 
@@ -826,11 +829,29 @@ else:
                             saved_count = save_test_case_to_supabase(free_form_test)
 
                         if saved_count > 0:
+                            # 1. 캐시 클리어
+                            st.cache_data.clear()
+
+                            # 2. DB 반영 대기
+                            import time
+                            time.sleep(0.5)
+                            
                             # 저장 직후 카운트 업데이트
                             supabase = get_supabase_client()
                             if supabase:
-                                result = supabase.table(TABLE_NAME).select('id').execute()
-                                st.session_state.tc_count = len(result.data)
+                                try:
+                                    result = supabase.table(TABLE_NAME).select('id').execute()
+                                    new_count = len(result.data)
+
+                                    # 강제로 세션 스테이트 삭제 후 재설정
+                                    if 'tc_count' in st.session_state:
+                                        del st.session_state.tc_count
+                                    st.session_state.tc_count = new_count
+
+                                    # 디버깅 출력
+                                    st.info(f"🔍 Debug: 줄글 저장 후 DB 카운트 = {new_count} (강제 업데이트)")
+                                except Exception as e:
+                                    st.error(f"🔍 Debug: 카운트 업데이트 실패 - {str(e)}")
                             
                             # 초기화 플래그 설정 후 rerun
                             st.session_state.tab1_tc_reset_flag = True
@@ -1021,12 +1042,29 @@ else:
                             success = save_spec_doc_to_supabase(new_spec)
 
                         if success:
-                            # 저장 직후 카운트 업데이트
+                            # 1. 캐시 클리어
+                            st.cache_data.clear()
+
+                            # 2. DB 반영 대기
+                            import time
+                            time.sleep(0.5)
+                            
+                            # 3. 저장 직후 카운트 업데이트 (강제)
                             supabase = get_supabase_client()
                             if supabase:
-                                result = supabase.table(SPEC_TABLE_NAME).select('id').execute()
-                                st.session_state.doc_count = len(result.data)
-            
+                                try:
+                                    result = supabase.table(SPEC_TABLE_NAME).select('id').execute()
+                                    new_count = len(result.data)
+                                    
+                                    # 강제로 세션 스테이트 삭제 후 재설정
+                                    if 'doc_count' in st.session_state:
+                                        del st.session_state.doc_count
+                                    st.session_state.doc_count = new_count
+
+                                    st.info(f"🔍 Debug: 기획 문서 저장 후 DB 카운트 = {new_count} (강제 업데이트)")
+                                except Exception as e:
+                                    st.error(f"🔍 Debug: 카운트 업데이트 실패 - {str(e)}")
+                                    
                             # 초기화 플래그 설정 후 rerun
                             st.session_state.tab2_spec_reset_flag = True
             
@@ -1446,19 +1484,24 @@ else:
 
                                 # 2. DB 반영 대기
                                 import time
-                                time.sleep(0.3)
+                                time.sleep(0.5)
 
-                                
                                 # 3. 저장 직후 카운트 업데이트
                                 supabase = get_supabase_client()
                                 if supabase:
                                     try:
                                         result = supabase.table(TABLE_NAME).select('id').execute()
-                                        st.session_state.tc_count = len(result.data)
-                                        st.info(f"🔍 Debug: AI 저장 후 DB 카운트 = {len(result.data)}")
-                                    except:
-                                        pass
+                                        new_count = len(result.data)
                                         
+                                        # 강제로 세션 스테이트 삭제 후 재설정
+                                        if 'tc_count' in st.session_state:
+                                            del st.session_state.tc_count
+                                        st.session_state.tc_count = new_count
+                                        
+                                        st.info(f"🔍 Debug: AI 저장 후 DB 카운트 = {new_count} (강제 업데이트)")
+                                    except Exception as e:
+                                        st.error(f"🔍 Debug: 카운트 업데이트 실패 - {str(e)}")
+
                                 st.success(f"✅ {saved_count}개 저장 완료!")
                                 del st.session_state.last_ai_response
                                 st.rerun()
