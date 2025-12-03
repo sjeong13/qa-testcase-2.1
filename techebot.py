@@ -855,11 +855,7 @@ else:
                     '</button></a>',
                     unsafe_allow_html=True
                 )
-                except Exception as e:
-                    st.error(f"통계 조회 실패: {str(e)}")
-                    st.metric("전체 케이스 수", "조회 실패")
-    else:
-        st.warning("Supabase 연결 필요")
+
        
         # 개발자 도구
         with tab1:
@@ -1002,10 +998,7 @@ else:
                     '</button></a>',
                     unsafe_allow_html=True
                 )
-                except Exception as e:
-                    st.error(f"문서 통계 조회 실패: {str(e)}")
-            else:
-                st.warning("Supabase 연결 필요")
+
 
     # ============================================
     # 메인 영역 - AI 기반 테스트 케이스 추천
