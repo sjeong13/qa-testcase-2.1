@@ -858,8 +858,8 @@ else:
                 except Exception as e:
                     st.error(f"통계 조회 실패: {str(e)}")
                     st.metric("전체 케이스 수", "조회 실패")
-            else:
-                st.warning("Supabase 연결 필요")
+    else:
+        st.warning("Supabase 연결 필요")
        
         # 개발자 도구
         with tab1:
