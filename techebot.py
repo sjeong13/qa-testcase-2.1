@@ -699,14 +699,15 @@ else:
                                 # 3. 저장 직후 카운트 업데이트
                                 supabase = get_supabase_client()
                                 if supabase:
-                                    result = supabase.table(TABLE_NAME).select('id').execute()
-                                    st.session_state.tc_count = len(result.data)
-                                    st.session_state.tc_count = new_count
+                                    try:
+                                        result = supabase.table(TABLE_NAME).select('id').execute()
+                                        st.session_state.tc_count = len(result.data)
+                                        st.session_state.tc_count = new_count
 
-                                    # 디버깅 출력
-                                    st.info(f"🔍 Debug: 저장 후 DB 카운트 = {new_count}")
-                                except Exception as e:
-                                    st.error(f"🔍 Debug: 카운트 업데이트 실패 - {str(e)}")
+                                        # 디버깅 출력
+                                        st.info(f"🔍 Debug: 저장 후 DB 카운트 = {new_count}")
+                                    except Exception as e:
+                                        st.error(f"🔍 Debug: 카운트 업데이트 실패 - {str(e)}")
 
                                 # 세션 초기화 (데이터프레임 리셋)
                                 st.session_state.edit_df = pd.DataFrame({
