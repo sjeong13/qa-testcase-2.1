@@ -46,6 +46,13 @@ if 'spec_docs' not in st.session_state:
 if 'search_history' not in st.session_state:
     st.session_state.search_history = []
 
+# 추가: 카운트 세션 스테이트 초기화
+if 'tc_count' not in st.session_state:
+    st.session_state.tc_count = 0
+
+if 'doc_count' not in st.session_state:
+    st.session_state.doc_count = 0
+
 # 편집 모드 세션 스테이트
 if 'editing_test_case_id' not in st.session_state:
     st.session_state.editing_test_case_id = None
