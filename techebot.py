@@ -51,8 +51,9 @@ if 'tc_count' not in st.session_state or st.session_state.get('force_reload_tc_c
     supabase = get_supabase_client()
     if supabase:
         try:
-            result = supabase.table(TABLE_NAME).select('id').execute()
-            st.session_state.tc_count = len(result.data)
+            # count() 사용 - 모든 레코드 수를 정확히 반환
+            result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
+            st.session_state.tc_count = result.count  # count 속성 사용
 
             # 플래그 초기화
             if 'force_reload_tc_count' in st.session_state:
@@ -66,8 +67,9 @@ if 'doc_count' not in st.session_state or st.session_state.get('force_reload_doc
     supabase = get_supabase_client()  # 다시 가져오기
     if supabase:
         try:
-            result = supabase.table(SPEC_TABLE_NAME).select('id').execute()
-            st.session_state.doc_count = len(result.data)
+            # count() 사용
+            result = supabase.table(SPEC_TABLE_NAME).select('id', count='exact').execute()
+            st.session_state.doc_count = result.count  # count 속성 사용
 
             # 플래그 초기화
             if 'force_reload_doc_count' in st.session_state:
@@ -385,8 +387,8 @@ if page == "test_cases":
                                         st.cache_data.clear()
 
                                         # 3. 카운트 업데이트
-                                        result = supabase.table(TABLE_NAME).select('id').execute()
-                                        st.session_state.tc_count = len(result.data)
+                                        result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
+                                        st.session_state.tc_count = result.count  # count 사용
                                         
                                         st.success("✅ 삭제되었습니다!")
                                         st.rerun()
@@ -468,8 +470,8 @@ if page == "test_cases":
                                             # 3. 카운트 업데이트
                                             supabase = get_supabase_client()
                                             if supabase:
-                                                result = supabase.table(TABLE_NAME).select('id').execute()
-                                                st.session_state.tc_count = len(result.data)
+                                                result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
+                                                st.session_state.tc_count = result.count  # count 사용
                                             
                                             st.success("✅ 삭제되었습니다!")
                                             st.rerun()
@@ -564,8 +566,8 @@ elif page == "spec_docs":
                                         st.cache_data.clear()
 
                                         # 3. 카운트 업데이트
-                                        result = supabase.table(SPEC_TABLE_NAME).select('id').execute()
-                                        st.session_state.doc_count = len(result.data)
+                                        result = supabase.table(SPEC_TABLE_NAME).select('id', count='exact').execute()
+                                        st.session_state.doc_count = result.count  # count 사용
                                         
                                         st.success("✅ 삭제되었습니다!")
                                         st.rerun()
@@ -740,8 +742,8 @@ else:
                                 supabase = get_supabase_client()
                                 if supabase:
                                     try:
-                                        result = supabase.table(TABLE_NAME).select('id').execute()
-                                        new_count = len(result.data)  # 변수 정의
+                                        result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
+                                        new_count = result.count  # count 사용
 
                                         # 플래그 설정 (rerun 후 초기화 트리거)
                                         st.session_state.force_reload_tc_count = True
@@ -848,8 +850,8 @@ else:
                             supabase = get_supabase_client()
                             if supabase:
                                 try:
-                                    result = supabase.table(TABLE_NAME).select('id').execute()
-                                    new_count = len(result.data)
+                                    result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
+                                    new_count = result.count  # count 사용
 
                                     # 플래그 설정
                                     st.session_state.force_reload_tc_count = True
@@ -921,8 +923,8 @@ else:
                 if supabase:
                     try:
                         # 전체 개수
-                        result = supabase.table(TABLE_NAME).select('id, category, data').execute()
-                        total_count = len(result.data)
+                        result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
+                        total_count = result.count  # ✅ count 사용
                         st.session_state.tc_count = total_count
                         st.write(f"🔍 Debug: DB에서 조회 = {total_count}")
                     except Exception as e:
@@ -1060,8 +1062,8 @@ else:
                             supabase = get_supabase_client()
                             if supabase:
                                 try:
-                                    result = supabase.table(SPEC_TABLE_NAME).select('id').execute()
-                                    new_count = len(result.data)
+                                    result = supabase.table(SPEC_TABLE_NAME).select('id', count='exact').execute()
+                                    new_count = result.count  # count 사용
 
                                     # 플래그 설정
                                     st.session_state.force_reload_doc_count = True
@@ -1496,8 +1498,8 @@ else:
                                 supabase = get_supabase_client()
                                 if supabase:
                                     try:
-                                        result = supabase.table(TABLE_NAME).select('id').execute()
-                                        new_count = len(result.data)
+                                        result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
+                                        new_count = result.count  # count 사용
 
                                         # 플래그 설정
                                         st.session_state.force_reload_tc_count = True
