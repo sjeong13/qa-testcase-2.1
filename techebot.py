@@ -201,18 +201,18 @@ if page == "test_cases":
                     reverse=True
                 )
 
-                # 5. 최근 5개 그룹만 선택
-                recent_5_groups = sorted_groups[:5]
+                # 5. 최근 2개 그룹만 선택
+                recent_2_groups = sorted_groups[:2]
 
-                # 6. 개별 케이스도 최근 5개만
-                recent_5_ungrouped = ungrouped_cases[:5]
+                # 6. 개별 케이스도 최근 2개만
+                recent_2_ungrouped = ungrouped_cases[:2]
                                 
-                st.markdown("### 📌 최근 등록한 테스트 케이스 (5개)")
+                st.markdown("### 📌 최근 등록한 테스트 케이스 (2개)")
                 st.markdown("---")
 
-                # 7. 최근 5개 그룹 표시
-                if recent_5_groups:
-                    for idx, (group_id, group_info) in enumerate(recent_5_groups):
+                # 7. 최근 2개 그룹 표시
+                if recent_2_groups:
+                    for idx, (group_id, group_info) in enumerate(recent_2_groups):
                         rows = group_info['rows']
                         category = group_info['category']
                         input_type = group_info['input_type']
@@ -407,9 +407,9 @@ if page == "test_cases":
                                             st.rerun()
                                         except Exception as e:
                                             st.error(f"❌ 삭제 실패: {str(e)}")
-                # 8. 개별 케이스. 그룹 없는 케이스 (줄글 형식 등) (최근 5개)
+                # 8. 개별 케이스. 그룹 없는 케이스 (줄글 형식 등) (최근 2개)
                 if recent_5_ungrouped:
-                    st.markdown("### 📝 최근 개별 케이스 (5개)")
+                    st.markdown("### 📝 최근 개별 케이스 (2개)")
                     
                     for row in recent_5_ungrouped:
                         tc_data = row.get('data', {})
@@ -517,7 +517,7 @@ elif page == "spec_docs":
 
             st.metric("전체 문서 수", f"{total_count}개")
             
-            # 2. 최근 5개만 조회
+            # 2. 최근 2개만 조회
             result = supabase.table(SPEC_TABLE_NAME)\
                 .select('*')\
                 .order('id', desc=True)\
@@ -525,7 +525,7 @@ elif page == "spec_docs":
                 .execute()
 
             if result.data:
-                st.markdown("### 📌 최근 등록한 기획 문서 (5개)")
+                st.markdown("### 📌 최근 등록한 기획 문서 (2개)")
                 st.markdown("---")
 
                 # 전체 기획 문서 표시
