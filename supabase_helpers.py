@@ -131,7 +131,7 @@ def hybrid_search_test_cases(query_text: str, category_filter=None, limit=None, 
         return []
 
 
-def hybrid_search_spec_docs(query_text: str):
+def hybrid_search_spec_docs(query_text: str, limit=None, similarity_threshold=0.3):
     """
     기획 문서 하이브리드 검색
 
