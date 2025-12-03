@@ -369,8 +369,17 @@ if page == "test_cases":
                             with col2:
                                 if st.button("🗑️ 삭제", key=f"delete_{unique_key}", use_container_width=True):
                                     try:
+                                        # 1. 그룹 내 모든 케이스 삭제
                                         for row in rows:
                                             supabase.table(TABLE_NAME).delete().eq('id', row['id']).execute()
+
+                                        # 2. 캐시 클리어
+                                        st.cache_data.clear()
+
+                                        # 3. 카운트 업데이트
+                                        result = supabase.table(TABLE_NAME).select('id').execute()
+                                        st.session_state.tc_count = len(result.data)
+                                        
                                         st.success("✅ 삭제되었습니다!")
                                         st.rerun()
                                     except Exception as e:
@@ -441,10 +450,22 @@ if page == "test_cases":
                                 # 삭제 버튼
                                 with col2:
                                     if st.button("🗑️ 삭제", key=f"delete_tc_{row['id']}", use_container_width=True):
-                                        supabase.table(TABLE_NAME).delete().eq('id', row['id']).execute()
-                                        if success:
+                                        try:
+                                            # 1. DB에서 삭제
+                                            supabase.table(TABLE_NAME).delete().eq('id', row['id']).execute()
+
+                                            # 2. 캐시 클리어
+                                            st.cache_data.clear()
+                                            
+                                            # 3. 카운트 업데이트
+                                            result = supabase.table(TABLE_NAME).select('id').execute()
+                                            st.session_state.tc_count = len(result.data)
+                                            
                                             st.success("✅ 삭제되었습니다!")
                                             st.rerun()
+
+                                        except Exception as e:
+                                            st.error(f"❌ 삭제 실패: {str(e)}")
 
             else:
                 st.info("아직 저장된 테스트 케이스가 없습니다.")
@@ -526,7 +547,16 @@ elif page == "spec_docs":
                                 # 삭제 버튼
                                 if st.button("🗑️ 삭제", key=f"delete_spec_{row['id']}", use_container_width=True):
                                     try:
+                                        # 1. DB에서 삭제
                                         supabase.table(SPEC_TABLE_NAME).delete().eq('id', row['id']).execute()
+
+                                        # 2. 캐시 클리어
+                                        st.cache_data.clear()
+
+                                        # 3. 카운트 업데이트
+                                        result = supabase.table(SPEC_TABLE_NAME).select('id').execute()
+                                        st.session_state.doc_count = len(result.data)
+                                        
                                         st.success("✅ 삭제되었습니다!")
                                         st.rerun()
                                     except Exception as e:
@@ -701,7 +731,7 @@ else:
                                 if supabase:
                                     try:
                                         result = supabase.table(TABLE_NAME).select('id').execute()
-                                        st.session_state.tc_count = len(result.data)
+                                        new_count = len(result.data)  # new_count 정의
                                         st.session_state.tc_count = new_count
 
                                         # 디버깅 출력
