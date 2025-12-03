@@ -689,11 +689,24 @@ else:
                                 saved_count = save_test_case_to_supabase(group_test)
             
                             if saved_count > 0:
-                                # 추가: 저장 직후 카운트 업데이트
+                                # 1. 캐시 클리어
+                                st.cache_data.clear()
+
+                                # 2. DB 반영 대기 (선택사항)
+                                import time
+                                time.sleep(0.3)
+                                
+                                # 3. 저장 직후 카운트 업데이트
                                 supabase = get_supabase_client()
                                 if supabase:
                                     result = supabase.table(TABLE_NAME).select('id').execute()
                                     st.session_state.tc_count = len(result.data)
+                                    st.session_state.tc_count = new_count
+
+                                    # 디버깅 출력
+                                    st.info(f"🔍 Debug: 저장 후 DB 카운트 = {new_count}")
+                                except Exception as e:
+                                    st.error(f"🔍 Debug: 카운트 업데이트 실패 - {str(e)}")
 
                                 # 세션 초기화 (데이터프레임 리셋)
                                 st.session_state.edit_df = pd.DataFrame({
@@ -832,9 +845,14 @@ else:
             # 테스트 케이스 요약
             st.subheader(f"📋 저장된 테스트 케이스")
 
+            # 🔍 디버깅: 세션 스테이트 확인
+            st.write(f"🔍 Debug: 세션 스테이트 tc_count = {st.session_state.get('tc_count', 'None')}")
+
+
             # 세션 스테이트 우선 사용
             if 'tc_count' in st.session_state:
                 total_count = st.session_state.tc_count
+                st.write(f"🔍 Debug: 세션 스테이트에서 가져옴 = {total_count}")
             else:
 
                 # Supabase에서 실시간 조회
@@ -845,6 +863,7 @@ else:
                         result = supabase.table(TABLE_NAME).select('id, category, data').execute()
                         total_count = len(result.data)
                         st.session_state.tc_count = total_count
+                        st.write(f"🔍 Debug: DB에서 조회 = {total_count}")
                     except Exception as e:
                         st.error(f"통계 조회 실패: {str(e)}")
                         total_count = 0
@@ -1037,6 +1056,9 @@ else:
         # 세션 스테이트에서 가져오기
         tc_count = st.session_state.get('tc_count', 0)
         doc_count = st.session_state.get('doc_count', 0)
+        
+        # 🔍 디버깅 출력
+        st.write(f"🔍 Debug: 메인 페이지 tc_count = {tc_count}")
 
         if tc_count == 0 and doc_count == 0:
             st.warning("⚠️ 먼저 테스트 케이스나 기획 문서를 추가해주세요!")
@@ -1386,12 +1408,21 @@ else:
                                 saved_count = save_test_case_to_supabase(group_test)
 
                             if saved_count > 0:
-                                # 추가: 저장 직후 카운트 업데이트
+                                # 1. 캐시 클리어
+                                st.cache_data.clear()
+
+                                # 2. DB 반영 대기
+                                import time
+                                time.sleep(0.3)
+
+                                
+                                # 3. 저장 직후 카운트 업데이트
                                 supabase = get_supabase_client()
                                 if supabase:
                                     try:
                                         result = supabase.table(TABLE_NAME).select('id').execute()
                                         st.session_state.tc_count = len(result.data)
+                                        st.info(f"🔍 Debug: AI 저장 후 DB 카운트 = {len(result.data)}")
                                     except:
                                         pass
                                         
