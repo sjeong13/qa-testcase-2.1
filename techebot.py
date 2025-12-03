@@ -59,7 +59,7 @@ if 'tc_count' not in st.session_state:
         st.session_state.tc_count = 0
 
 if 'doc_count' not in st.session_state:
-    st.session_state.doc_count = 0
+    supabase = get_supabase_client()  # 다시 가져오기
     if supabase:
         try:
             result = supabase.table(SPEC_TABLE_NAME).select('id').execute()
@@ -458,8 +458,10 @@ if page == "test_cases":
                                             st.cache_data.clear()
                                             
                                             # 3. 카운트 업데이트
-                                            result = supabase.table(TABLE_NAME).select('id').execute()
-                                            st.session_state.tc_count = len(result.data)
+                                            supabase = get_supabase_client()
+                                            if supabase:
+                                                result = supabase.table(TABLE_NAME).select('id').execute()
+                                                st.session_state.tc_count = len(result.data)
                                             
                                             st.success("✅ 삭제되었습니다!")
                                             st.rerun()
@@ -731,7 +733,7 @@ else:
                                 if supabase:
                                     try:
                                         result = supabase.table(TABLE_NAME).select('id').execute()
-                                        new_count = len(result.data)  # new_count 정의
+                                        new_count = len(result.data)  # 변수 정의
                                         st.session_state.tc_count = new_count
 
                                         # 디버깅 출력
