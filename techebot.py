@@ -276,9 +276,9 @@ if page == "test_cases":
                                             group_test = {
                                                 "group_id": group_id,
                                                 "input_type": input_type,
-                                                "category": category,
-                                                # "name": f"({len(new_table_data)}개)",
+                                                # "category": category,
                                                 "category": "입력 그룹",
+                                                "name": f"({len(new_table_data)}개)",
                                                 "table_data": new_table_data
                                             }
 
