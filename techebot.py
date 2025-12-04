@@ -1,9 +1,15 @@
+
 # =====================================================================================
 """
 2025-12-01
 QA 테스트 케이스 자동 생성 봇 v2.1
 - 하이브리드 검색: 벡터 검색 + LLM 재랭킹
 - Supabase 테이블: test_cases_v21, spec_docs_v21
+
+2025-12-03
+- 🔍 Debug : 저장 개수 디버깅 코드 추가
+- 저장 개수 디버깅 코드 제거
+
 """
 # =====================================================================================
 
@@ -771,11 +777,6 @@ else:
                                         # 플래그 설정 (rerun 후 초기화 트리거)
                                         st.session_state.force_reload_tc_count = True
                                         st.session_state.tc_count = new_count
-                                        
-                                        # 디버깅 출력
-                                        st.info(f"🔍 Debug: 저장 후 DB 카운트 = {new_count}")
-                                    except Exception as e:
-                                        st.error(f"🔍 Debug: 카운트 업데이트 실패 - {str(e)}")
 
                                 # 세션 초기화 (데이터프레임 리셋)
                                 st.session_state.edit_df = pd.DataFrame({
@@ -879,11 +880,6 @@ else:
                                     # 플래그 설정
                                     st.session_state.force_reload_tc_count = True
                                     st.session_state.tc_count = new_count
-
-                                    # 디버깅 출력
-                                    st.info(f"🔍 Debug: 줄글 저장 후 DB 카운트 = {new_count}")
-                                except Exception as e:
-                                    st.error(f"🔍 Debug: 카운트 업데이트 실패 - {str(e)}")
                             
                             # 초기화 플래그 설정 후 rerun
                             st.session_state.tab1_tc_reset_flag = True
@@ -931,14 +927,9 @@ else:
             # 테스트 케이스 요약
             st.subheader(f"📋 저장된 테스트 케이스")
 
-            # 🔍 디버깅: 세션 스테이트 확인
-            st.write(f"🔍 Debug: 세션 스테이트 tc_count = {st.session_state.get('tc_count', 'None')}")
-
-
             # 세션 스테이트 우선 사용
             if 'tc_count' in st.session_state:
                 total_count = st.session_state.tc_count
-                st.write(f"🔍 Debug: 세션 스테이트에서 가져옴 = {total_count}")
             else:
 
                 # Supabase에서 실시간 조회
@@ -949,7 +940,6 @@ else:
                         result = supabase.table(TABLE_NAME).select('id', count='exact').execute()
                         total_count = result.count  # ✅ count 사용
                         st.session_state.tc_count = total_count
-                        st.write(f"🔍 Debug: DB에서 조회 = {total_count}")
                     except Exception as e:
                         st.error(f"통계 조회 실패: {str(e)}")
                         total_count = 0
@@ -1091,10 +1081,6 @@ else:
                                     # 플래그 설정
                                     st.session_state.force_reload_doc_count = True
                                     st.session_state.doc_count = new_count
-
-                                    st.info(f"🔍 Debug: 기획 문서 저장 후 DB 카운트 = {new_count}")
-                                except Exception as e:
-                                    st.error(f"🔍 Debug: 카운트 업데이트 실패 - {str(e)}")
                                     
                             # 초기화 플래그 설정 후 rerun
                             st.session_state.tab2_spec_reset_flag = True
@@ -1158,9 +1144,6 @@ else:
         # 세션 스테이트에서 가져오기
         tc_count = st.session_state.get('tc_count', 0)
         doc_count = st.session_state.get('doc_count', 0)
-        
-        # 🔍 디버깅 출력
-        st.write(f"🔍 Debug: 메인 페이지 tc_count = {tc_count}")
 
         if tc_count == 0 and doc_count == 0:
             st.warning("⚠️ 먼저 테스트 케이스나 기획 문서를 추가해주세요!")
@@ -1538,10 +1521,6 @@ else:
                                         # 플래그 설정
                                         st.session_state.force_reload_tc_count = True
                                         st.session_state.tc_count = new_count
-                                        
-                                        st.info(f"🔍 Debug: AI 저장 후 DB 카운트 = {new_count}")
-                                    except Exception as e:
-                                        st.error(f"🔍 Debug: 카운트 업데이트 실패 - {str(e)}")
 
                                 st.success(f"✅ {saved_count}개 저장 완료!")
                                 del st.session_state.last_ai_response
