@@ -777,6 +777,8 @@ else:
                                         # 플래그 설정 (rerun 후 초기화 트리거)
                                         st.session_state.force_reload_tc_count = True
                                         st.session_state.tc_count = new_count
+                                    except Exception as e:
+                                        st.error(f"카운트 업데이트 실패: {str(e)}")
 
                                 # 세션 초기화 (데이터프레임 리셋)
                                 st.session_state.edit_df = pd.DataFrame({
@@ -880,6 +882,9 @@ else:
                                     # 플래그 설정
                                     st.session_state.force_reload_tc_count = True
                                     st.session_state.tc_count = new_count
+
+                                except Exception as e:
+                                    st.error(f"카운트 업데이트 실패: {str(e)}")
                             
                             # 초기화 플래그 설정 후 rerun
                             st.session_state.tab1_tc_reset_flag = True
@@ -1081,6 +1086,9 @@ else:
                                     # 플래그 설정
                                     st.session_state.force_reload_doc_count = True
                                     st.session_state.doc_count = new_count
+
+                                except Exception as e:
+                                    st.error(f"카운트 업데이트 실패: {str(e)}")
                                     
                             # 초기화 플래그 설정 후 rerun
                             st.session_state.tab2_spec_reset_flag = True
@@ -1521,6 +1529,9 @@ else:
                                         # 플래그 설정
                                         st.session_state.force_reload_tc_count = True
                                         st.session_state.tc_count = new_count
+
+                                    except Exception as e:
+                                        st.error(f"카운트 업데이트 실패: {str(e)}")
 
                                 st.success(f"✅ {saved_count}개 저장 완료!")
                                 del st.session_state.last_ai_response
