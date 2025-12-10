@@ -144,7 +144,7 @@ if not st.session_state.authenticated:
     st.stop()
 
 st.title("👾 테케봇 (QA Test Case Bot)")
-st.caption("v2.1 - 하이브리드 검색 버전 🚀")
+# st.caption("v2.1 - 하이브리드 검색 버전 🚀")
 st.markdown("---")
 
 # ============================================
