@@ -46,12 +46,13 @@ def get_supabase_client() -> Client:
 # 임베딩 생성
 # ========================================
 def generate_embedding(text: str):
-    """텍스트를 768차원 벡터로 변환 (Gemini text-embedding-004)"""
+    """텍스트를 768차원 벡터로 변환 (Gemini gemini-embedding-001)"""
     try:
         result = genai.embed_content(
-            model="models/text-embedding-004",
+            model="models/gemini-embedding-001",
             content=text,
-            task_type="retrieval_document"
+            task_type="retrieval_document",
+            output_dimensionality=768
         )
         return result['embedding']
     except Exception as e:
